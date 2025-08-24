@@ -28,51 +28,74 @@ class ContractDownloader:
     """智能合约下载器类"""
     
     def __init__(self):
-        # 支持的链和对应的API配置
-        self.chain_configs = {
-            "1": {  # Ethereum Mainnet
-                "name": "Ethereum",
-                "api_url": "https://api.etherscan.io/api",
-                "api_key_env": "ETHERSCAN_API_KEY",
-                "explorer_url": "https://etherscan.io"
-            },
-            "56": {  # BSC Mainnet
-                "name": "BSC",
-                "api_url": "https://api.bscscan.com/api",
-                "api_key_env": "BSCSCAN_API_KEY", 
-                "explorer_url": "https://bscscan.com"
-            },
-            "137": {  # Polygon Mainnet
-                "name": "Polygon",
-                "api_url": "https://api.polygonscan.com/api",
-                "api_key_env": "POLYGONSCAN_API_KEY",
-                "explorer_url": "https://polygonscan.com"
-            },
-            "250": {  # Fantom Mainnet
-                "name": "Fantom",
-                "api_url": "https://api.ftmscan.com/api",
-                "api_key_env": "FTMSCAN_API_KEY",
-                "explorer_url": "https://ftmscan.com"
-            },
-            "43114": {  # Avalanche Mainnet
-                "name": "Avalanche",
-                "api_url": "https://api.snowtrace.io/api",
-                "api_key_env": "SNOWTRACE_API_KEY",
-                "explorer_url": "https://snowtrace.io"
-            },
-            "42161": {  # Arbitrum One
-                "name": "Arbitrum",
-                "api_url": "https://api.arbiscan.io/api",
-                "api_key_env": "ARBISCAN_API_KEY",
-                "explorer_url": "https://arbiscan.io"
-            },
-            "10": {  # Optimism
-                "name": "Optimism",
-                "api_url": "https://api-optimistic.etherscan.io/api",
-                "api_key_env": "OPTIMISM_API_KEY",
-                "explorer_url": "https://optimistic.etherscan.io"
+        # 支持 Etherscan V2 统一 API
+        self.use_v2_api = os.getenv("USE_ETHERSCAN_V2", "true").lower() == "true"
+        
+        if self.use_v2_api:
+            # Etherscan V2 - 统一配置，支持 50+ 条链
+            self.chain_configs = {
+                "1": {"name": "Ethereum", "explorer_url": "https://etherscan.io"},
+                "56": {"name": "BSC", "explorer_url": "https://bscscan.com"},
+                "137": {"name": "Polygon", "explorer_url": "https://polygonscan.com"},
+                "250": {"name": "Fantom", "explorer_url": "https://ftmscan.com"},
+                "43114": {"name": "Avalanche", "explorer_url": "https://snowtrace.io"},
+                "42161": {"name": "Arbitrum", "explorer_url": "https://arbiscan.io"},
+                "10": {"name": "Optimism", "explorer_url": "https://optimistic.etherscan.io"},
+                "8453": {"name": "Base", "explorer_url": "https://basescan.org"},
+                "534352": {"name": "Scroll", "explorer_url": "https://scrollscan.com"},
+                "81457": {"name": "Blast", "explorer_url": "https://blastscan.io"},
+                "5000": {"name": "Mantle", "explorer_url": "https://mantlescan.xyz"},
+                "59144": {"name": "Linea", "explorer_url": "https://lineascan.build"}
             }
-        }
+            # V2 统一端点和 API 密钥
+            self.api_url = "https://api.etherscan.io/v2/api"
+            self.api_key_env = "ETHERSCAN_API_KEY"
+        else:
+            # V1 API - 向后兼容
+            self.chain_configs = {
+                "1": {
+                    "name": "Ethereum",
+                    "api_url": "https://api.etherscan.io/api",
+                    "api_key_env": "ETHERSCAN_API_KEY",
+                    "explorer_url": "https://etherscan.io"
+                },
+                "56": {
+                    "name": "BSC",
+                    "api_url": "https://api.bscscan.com/api",
+                    "api_key_env": "BSCSCAN_API_KEY", 
+                    "explorer_url": "https://bscscan.com"
+                },
+                "137": {
+                    "name": "Polygon",
+                    "api_url": "https://api.polygonscan.com/api",
+                    "api_key_env": "POLYGONSCAN_API_KEY",
+                    "explorer_url": "https://polygonscan.com"
+                },
+                "250": {
+                    "name": "Fantom",
+                    "api_url": "https://api.ftmscan.com/api",
+                    "api_key_env": "FTMSCAN_API_KEY",
+                    "explorer_url": "https://ftmscan.com"
+                },
+                "43114": {
+                    "name": "Avalanche",
+                    "api_url": "https://api.snowtrace.io/api",
+                    "api_key_env": "SNOWTRACE_API_KEY",
+                    "explorer_url": "https://snowtrace.io"
+                },
+                "42161": {
+                    "name": "Arbitrum",
+                    "api_url": "https://api.arbiscan.io/api",
+                    "api_key_env": "ARBISCAN_API_KEY",
+                    "explorer_url": "https://arbiscan.io"
+                },
+                "10": {
+                    "name": "Optimism",
+                    "api_url": "https://api-optimistic.etherscan.io/api",
+                    "api_key_env": "OPTIMISM_API_KEY",
+                    "explorer_url": "https://optimistic.etherscan.io"
+                }
+            }
         
         # 从环境变量获取配置
         self.download_delay = float(os.getenv("DOWNLOAD_DELAY", "1"))
@@ -88,11 +111,18 @@ class ContractDownloader:
         if chain_id not in self.chain_configs:
             return None
         
-        env_var = self.chain_configs[chain_id]["api_key_env"]
-        api_key = os.getenv(env_var)
-        
-        if not api_key and self.verbose:
-            print(f"警告: 未找到 {env_var} 环境变量，将使用无API密钥模式（可能受到速率限制）")
+        if self.use_v2_api:
+            # V2 API 使用统一的 API 密钥
+            api_key = os.getenv(self.api_key_env)
+            if not api_key and self.verbose:
+                print(f"警告: 未找到 {self.api_key_env} 环境变量")
+                print("建议配置 Etherscan V2 API 密钥以访问 50+ 条链")
+        else:
+            # V1 API 使用链特定的 API 密钥
+            env_var = self.chain_configs[chain_id]["api_key_env"]
+            api_key = os.getenv(env_var)
+            if not api_key and self.verbose:
+                print(f"警告: 未找到 {env_var} 环境变量，将使用无API密钥模式（可能受到速率限制）")
         
         return api_key
     
@@ -129,6 +159,14 @@ class ContractDownloader:
             "address": contract_address
         }
         
+        if self.use_v2_api:
+            # V2 API 需要 chainid 参数
+            params["chainid"] = chain_id
+            api_url = self.api_url
+        else:
+            # V1 API 使用链特定的 URL
+            api_url = config["api_url"]
+        
         if api_key:
             params["apikey"] = api_key
         
@@ -136,12 +174,13 @@ class ContractDownloader:
             params["tag"] = block_number
         
         try:
-            print(f"正在从 {config['name']} 网络获取合约源代码...")
+            api_version = "V2" if self.use_v2_api else "V1"
+            print(f"正在从 {config['name']} 网络获取合约源代码... (使用 Etherscan {api_version} API)")
             print(f"合约地址: {contract_address}")
             if block_number:
                 print(f"区块号: {block_number}")
             
-            response = requests.get(config["api_url"], params=params, timeout=30)
+            response = requests.get(api_url, params=params, timeout=30)
             response.raise_for_status()
             
             data = response.json()

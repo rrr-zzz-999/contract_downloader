@@ -4,16 +4,20 @@
 
 ## 🚀 功能特性
 
-- ✅ 支持多个主流区块链网络 (Ethereum、BSC、Polygon 等)
-- ✅ 批量下载功能 (JSON、CSV、数组)
+- ✅ 支持 50+ 区块链网络 (使用 Etherscan V2 API)
+- ✅ 批量下载功能 (JSON、CSV 格式)
 - ✅ 自动处理单文件和多文件合约
 - ✅ 保存完整合约元数据信息
 - ✅ 支持指定区块号获取历史版本
-- ✅ 使用 `.env` 文件管理 API 密钥
+- ✅ 使用 `.env` 文件管理配置
+- ✅ 统一 API 密钥支持多链 (Etherscan V2)
+- ✅ 向后兼容 V1 API
 - ✅ 智能错误处理和重试机制
 - ✅ 自动创建目录结构
 
 ## 📋 支持的区块链
+
+### Etherscan V2 API 支持的主要区块链:
 
 | 链ID | 网络名称 | 简称 | 浏览器 |
 |------|----------|------|--------|
@@ -24,6 +28,13 @@
 | 43114| Avalanche| avalanche | snowtrace.io |
 | 42161| Arbitrum | arbitrum | arbiscan.io |
 | 10   | Optimism | optimism | optimistic.etherscan.io |
+| 8453 | Base     | base | basescan.org |
+| 534352| Scroll  | scroll | scrollscan.com |
+| 81457| Blast    | blast | blastscan.io |
+| 5000 | Mantle   | mantle | mantlescan.xyz |
+| 59144| Linea    | linea | lineascan.build |
+
+> 💡 **Etherscan V2 优势**: 使用一个 API 密钥即可访问 [50+ 条区块链](https://docs.etherscan.io/etherscan-v2)，大大简化了配置管理。
 
 ## 🔧 安装和配置
 
@@ -40,17 +51,12 @@ pip install -r requirements.txt
 cp env.example .env
 ```
 
-编辑 `.env` 文件，填入你的 API 密钥：
+编辑 `.env` 文件，填入你的配置：
 
 ```bash
-# 区块链浏览器 API 密钥配置
-ETHERSCAN_API_KEY=your_etherscan_api_key_here
-BSCSCAN_API_KEY=your_bscscan_api_key_here
-POLYGONSCAN_API_KEY=your_polygonscan_api_key_here
-FTMSCAN_API_KEY=your_ftmscan_api_key_here
-SNOWTRACE_API_KEY=your_snowtrace_api_key_here
-ARBISCAN_API_KEY=your_arbiscan_api_key_here
-OPTIMISM_API_KEY=your_optimism_api_key_here
+# Etherscan V2 API 配置 (推荐 - 一个密钥支持 50+ 条链)
+USE_ETHERSCAN_V2=true
+ETHERSCAN_API_KEY=your_etherscan_v2_api_key_here
 
 # 通用配置
 DOWNLOAD_DELAY=1          # 下载延迟 (秒)
@@ -58,19 +64,23 @@ OUTPUT_DIR=contracts      # 输出目录
 VERBOSE=true             # 启用详细日志
 ```
 
+**🔥 Etherscan V2 优势**:
+- ✅ 一个 API 密钥访问 50+ 条链
+- ✅ 统一的 API 端点
+- ✅ 简化的配置管理
+- ✅ 向后兼容 V1 API
+
 ### 3. 获取 API 密钥
 
-访问对应的区块链浏览器网站获取免费 API 密钥：
+**推荐**: 访问 [Etherscan V2 API](https://docs.etherscan.io/etherscan-v2) 获取统一 API 密钥
+- 🌟 **Etherscan**: https://etherscan.io/apis (支持 50+ 条链)
 
-- **Ethereum**: https://etherscan.io/apis
+**向后兼容**: 如果需要使用 V1 API，访问各链的浏览器：
 - **BSC**: https://bscscan.com/apis  
 - **Polygon**: https://polygonscan.com/apis
-- **Fantom**: https://ftmscan.com/apis
-- **Avalanche**: https://snowtrace.io/apis
-- **Arbitrum**: https://arbiscan.io/apis
-- **Optimism**: https://optimistic.etherscan.io/apis
+- **其他链**: 查看上方支持链列表
 
-> 💡 **提示**: 虽然可以不配置 API 密钥使用，但会受到严格的速率限制。强烈建议配置 API 密钥以获得更好的下载体验。
+> 💡 **强烈推荐使用 Etherscan V2**: 一个密钥即可访问所有支持的区块链，大大简化配置管理。
 
 ## 📖 使用方法
 
@@ -89,14 +99,14 @@ python contract_downloader.py --list-chains
 
 ### 批量下载
 
-#### 方法1: 从 JSON 文件批量下载
+#### 方法1: 从 CSV 文件批量下载
 ```bash
-python contract_downloader.py --batch contracts_full.json
+python contract_downloader.py --batch contracts_full.csv
 ```
 
-#### 方法2: 使用演示脚本
+#### 方法2: 从 JSON 文件批量下载
 ```bash
-python demo.py
+python contract_downloader.py --batch contracts.json
 ```
 
 #### 方法3: 在代码中使用
@@ -172,11 +182,8 @@ python contract_downloader.py 0xdAC17F958D2ee523a2206206994597C13D831ec7 1 --blo
 
 ### 批量下载示例
 ```bash
-# 使用提供的示例数据
+# 批量下载所有合约
 python contract_downloader.py --batch contracts_full.csv
-
-# 或使用交互式脚本
-python demo.py
 ```
 
 ## 📁 输出结构
