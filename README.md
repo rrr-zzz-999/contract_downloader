@@ -94,14 +94,14 @@ python contract_downloader.py --list-chains
 python contract_downloader.py --batch contracts_full.json
 ```
 
-#### 方法2: 使用专门的批量下载脚本
+#### 方法2: 使用演示脚本
 ```bash
-python batch_downloader.py
+python demo.py
 ```
 
 #### 方法3: 在代码中使用
 ```python
-from batch_downloader import download_from_array
+from contract_downloader import ContractDownloader
 
 contracts = [
     {
@@ -112,7 +112,8 @@ contracts = [
     }
 ]
 
-results = download_from_array(contracts)
+downloader = ContractDownloader()
+results = downloader.download_contracts_batch(contracts)
 ```
 
 ## 📊 数据格式

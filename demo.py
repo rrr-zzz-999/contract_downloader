@@ -16,7 +16,7 @@ try:
 except ImportError:
     print("⚠️  未安装 python-dotenv，运行: pip install python-dotenv")
 
-from batch_downloader import download_from_array, download_from_json_file, download_from_csv_file
+from contract_downloader import ContractDownloader
 
 def demo_array_download():
     """演示从数组下载"""
@@ -50,7 +50,8 @@ def demo_array_download():
     ]
     
     print(f"准备下载 {len(contracts)} 个合约...")
-    results = download_from_array(contracts)
+    downloader = ContractDownloader()
+    results = downloader.download_contracts_batch(contracts)
     
     if results:
         success_count = sum(1 for success in results.values() if success)
@@ -64,29 +65,45 @@ def demo_json_download():
     print("演示2: 从JSON文件批量下载")
     print("=" * 60)
     
-    results = download_from_json_file("contracts_example.json")
+    # 使用命令行方式演示
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["python", "contract_downloader.py", "--batch", "contracts_example.json"],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode == 0:
+            print("✅ JSON文件下载完成!")
+            results = True
+        else:
+            print(f"❌ JSON文件下载失败: {result.stderr}")
+            results = False
+    except Exception as e:
+        print(f"❌ 执行失败: {e}")
+        results = False
     
-    if results:
-        success_count = sum(1 for success in results.values() if success)
-        total_count = len(results)
-        print(f"\n✅ JSON文件下载完成! 成功: {success_count}/{total_count}")
-    else:
-        print("\n❌ JSON文件下载失败!")
-
 def demo_csv_download():
     """演示从CSV文件下载"""
     print("\n" + "=" * 60)
     print("演示3: 从CSV文件批量下载")
     print("=" * 60)
     
-    results = download_from_csv_file("contracts_example.csv")
-    
-    if results:
-        success_count = sum(1 for success in results.values() if success)
-        total_count = len(results)
-        print(f"\n✅ CSV文件下载完成! 成功: {success_count}/{total_count}")
-    else:
-        print("\n❌ CSV文件下载失败!")
+    # 使用命令行方式演示
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["python", "contract_downloader.py", "--batch", "contracts_example.csv"],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode == 0:
+            print("✅ CSV文件下载完成!")
+            results = True
+        else:
+            print(f"❌ CSV文件下载失败: {result.stderr}")
+            results = False
+    except Exception as e:
+        print(f"❌ 执行失败: {e}")
+        results = False
 
 def main():
     """主演示函数"""

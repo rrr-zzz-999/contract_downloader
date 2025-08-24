@@ -9,6 +9,7 @@
 import os
 import sys
 import json
+import csv
 import time
 import requests
 from pathlib import Path
@@ -412,7 +413,7 @@ def main():
     parser.add_argument("chain_id", nargs="?", help="链ID (1=Ethereum, 56=BSC, 137=Polygon, 等)")
     parser.add_argument("--block", "-b", help="区块号 (可选)", default=None)
     parser.add_argument("--list-chains", "-l", action="store_true", help="显示支持的链")
-    parser.add_argument("--batch", help="批量下载，指定包含合约信息的JSON文件路径")
+    parser.add_argument("--batch", help="批量下载，指定包含合约信息的JSON或CSV文件路径")
     
     args = parser.parse_args()
     
@@ -427,13 +428,62 @@ def main():
     if args.batch:
         # 批量下载模式
         try:
-            with open(args.batch, 'r', encoding='utf-8') as f:
-                contracts = json.load(f)
+            batch_file = Path(args.batch)
             
-            if not isinstance(contracts, list):
-                print("错误: JSON文件应包含合约信息数组")
+            if not batch_file.exists():
+                print(f"错误: 文件 '{args.batch}' 不存在")
                 sys.exit(1)
             
+            # 根据文件扩展名判断格式
+            file_ext = batch_file.suffix.lower()
+            
+            if file_ext == '.json':
+                # JSON 文件
+                with open(batch_file, 'r', encoding='utf-8') as f:
+                    contracts = json.load(f)
+                
+                if not isinstance(contracts, list):
+                    print("错误: JSON文件应包含合约信息数组")
+                    sys.exit(1)
+                    
+            elif file_ext == '.csv':
+                # CSV 文件
+                contracts = []
+                
+                with open(batch_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        contract = {}
+                        
+                        # 处理常见的列名映射
+                        for key, value in row.items():
+                            key_lower = key.lower().strip()
+                            
+                            if key_lower in ['name', 'contract_name', '名称']:
+                                contract['name'] = value.strip()
+                            elif key_lower in ['chain', 'network', '链', '网络']:
+                                contract['chain'] = value.strip()
+                            elif key_lower in ['address', 'contract_address', 'contract', '地址', '合约地址']:
+                                contract['address'] = value.strip()
+                            elif key_lower in ['height', 'block', 'block_number', '区块', '区块号']:
+                                if value.strip():
+                                    contract['height'] = value.strip()
+                            elif key_lower in ['date', '日期']:
+                                contract['date'] = value.strip()
+                        
+                        if contract.get('address'):  # 只有地址不为空才添加
+                            contracts.append(contract)
+                
+                if not contracts:
+                    print("错误: CSV文件中没有找到有效的合约信息")
+                    sys.exit(1)
+                    
+            else:
+                print(f"错误: 不支持的文件格式 '{file_ext}'")
+                print("支持的格式: .json, .csv")
+                sys.exit(1)
+            
+            # 执行批量下载
             results = downloader.download_contracts_batch(contracts)
             
             # 检查是否有失败的下载
@@ -441,12 +491,6 @@ def main():
             if failed_count > 0:
                 sys.exit(1)
                 
-        except FileNotFoundError:
-            print(f"错误: 文件 '{args.batch}' 不存在")
-            sys.exit(1)
-        except json.JSONDecodeError as e:
-            print(f"错误: JSON文件格式错误: {e}")
-            sys.exit(1)
         except Exception as e:
             print(f"错误: {e}")
             sys.exit(1)
