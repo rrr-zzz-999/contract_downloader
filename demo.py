@@ -3,7 +3,18 @@
 """
 完整的使用示例
 演示如何使用不同方式批量下载合约
+使用 .env 文件管理配置
 """
+
+import os
+
+# 尝试加载 dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 加载 .env 文件
+    print("✅ 已加载 .env 配置文件")
+except ImportError:
+    print("⚠️  未安装 python-dotenv，运行: pip install python-dotenv")
 
 from batch_downloader import download_from_array, download_from_json_file, download_from_csv_file
 

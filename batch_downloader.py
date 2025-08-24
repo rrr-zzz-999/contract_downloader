@@ -3,10 +3,21 @@
 """
 批量合约下载器
 支持从JSON数组、CSV文件或直接代码中的数组批量下载智能合约源代码
+使用 .env 文件管理配置
 """
 
 import json
 import csv
+import os
+
+# 尝试加载 dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 加载 .env 文件
+except ImportError:
+    print("提示: 安装 python-dotenv 以使用 .env 文件管理配置")
+    print("运行: pip install python-dotenv")
+
 from contract_downloader import ContractDownloader
 
 def download_from_array(contracts_array):
@@ -54,7 +65,7 @@ def download_from_csv_file(csv_file_path):
                         contract['name'] = value.strip()
                     elif key_lower in ['chain', 'network', '链', '网络']:
                         contract['chain'] = value.strip()
-                    elif key_lower in ['address', 'contract_address', '地址', '合约地址']:
+                    elif key_lower in ['address', 'contract_address', 'contract', '地址', '合约地址']:
                         contract['address'] = value.strip()
                     elif key_lower in ['height', 'block', 'block_number', '区块', '区块号']:
                         if value.strip():

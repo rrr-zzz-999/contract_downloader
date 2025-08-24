@@ -3,6 +3,7 @@
 """
 智能合约源代码下载器
 支持从多个区块链网络下载验证的智能合约源代码
+使用 .env 文件管理 API 密钥
 """
 
 import os
@@ -13,6 +14,14 @@ import requests
 from pathlib import Path
 from typing import Dict, Optional, List
 import argparse
+
+# 尝试加载 dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 加载 .env 文件
+except ImportError:
+    print("提示: 安装 python-dotenv 以使用 .env 文件管理 API 密钥")
+    print("运行: pip install python-dotenv")
 
 class ContractDownloader:
     """智能合约下载器类"""
@@ -64,8 +73,13 @@ class ContractDownloader:
             }
         }
         
+        # 从环境变量获取配置
+        self.download_delay = float(os.getenv("DOWNLOAD_DELAY", "1"))
+        self.verbose = os.getenv("VERBOSE", "true").lower() == "true"
+        
         # 创建输出目录
-        self.output_dir = Path("contracts")
+        output_dir_name = os.getenv("OUTPUT_DIR", "contracts")
+        self.output_dir = Path(output_dir_name)
         self.output_dir.mkdir(exist_ok=True)
     
     def get_api_key(self, chain_id: str) -> Optional[str]:
@@ -76,7 +90,7 @@ class ContractDownloader:
         env_var = self.chain_configs[chain_id]["api_key_env"]
         api_key = os.getenv(env_var)
         
-        if not api_key:
+        if not api_key and self.verbose:
             print(f"警告: 未找到 {env_var} 环境变量，将使用无API密钥模式（可能受到速率限制）")
         
         return api_key
@@ -371,7 +385,7 @@ class ContractDownloader:
                 
                 # 添加延迟避免API限制
                 if i < total_contracts:
-                    time.sleep(1)
+                    time.sleep(self.download_delay)
                     
             except Exception as e:
                 print(f"❌ 处理合约时出错: {e}")
