@@ -257,11 +257,12 @@ class ContractDownloader:
             print(f"保存文件时出错: {e}")
             return False
     
-    def download_contract(self, chain_id: str, contract_address: str, block_number: Optional[str] = None) -> bool:
+    def download_contract(self, chain_id: str, contract_address: str, block_number: Optional[str] = None, show_header: bool = True) -> bool:
         """下载合约的主要方法"""
-        print("=" * 60)
-        print("智能合约源代码下载器")
-        print("=" * 60)
+        if show_header:
+            print("=" * 60)
+            print("智能合约源代码下载器")
+            print("=" * 60)
         
         # 获取合约源代码
         contract_data = self.get_contract_source(chain_id, contract_address, block_number)
@@ -284,14 +285,120 @@ class ContractDownloader:
         else:
             print(f"\n❌ 合约下载失败!")
             return False
+    
+    def download_contracts_batch(self, contracts: List[Dict]) -> Dict[str, bool]:
+        """批量下载合约
+        
+        Args:
+            contracts: 合约信息列表，每个元素包含:
+                - name: 合约名称 (可选)
+                - chain: 链标识 (如 'bsc', 'eth', 'polygon' 或链ID)
+                - address: 合约地址
+                - height/block: 区块高度 (可选)
+        
+        Returns:
+            Dict: 下载结果，键为合约标识，值为是否成功
+        """
+        print("=" * 60)
+        print("批量智能合约源代码下载器")
+        print("=" * 60)
+        
+        # 链名称映射到ID
+        chain_name_to_id = {
+            'eth': '1',
+            'ethereum': '1',
+            'bsc': '56',
+            'bnb': '56',
+            'polygon': '137',
+            'matic': '137',
+            'fantom': '250',
+            'ftm': '250',
+            'avalanche': '43114',
+            'avax': '43114',
+            'arbitrum': '42161',
+            'arb': '42161',
+            'optimism': '10',
+            'opt': '10'
+        }
+        
+        results = {}
+        total_contracts = len(contracts)
+        successful_downloads = 0
+        
+        print(f"准备下载 {total_contracts} 个合约...\n")
+        
+        for i, contract in enumerate(contracts, 1):
+            try:
+                # 提取合约信息
+                name = contract.get('name', f'Contract_{i}')
+                chain = str(contract.get('chain', ''))
+                address = contract.get('address', '')
+                
+                # 处理区块号 (height 或 block)
+                block_number = contract.get('height') or contract.get('block')
+                if block_number:
+                    block_number = str(block_number)
+                
+                # 转换链名称为ID
+                if chain.lower() in chain_name_to_id:
+                    chain_id = chain_name_to_id[chain.lower()]
+                else:
+                    chain_id = chain
+                
+                print(f"\n[{i}/{total_contracts}] 正在下载: {name}")
+                print(f"  链: {chain} (ID: {chain_id})")
+                print(f"  地址: {address}")
+                if block_number:
+                    print(f"  区块: {block_number}")
+                
+                # 验证必要参数
+                if not address:
+                    print(f"❌ 错误: 合约地址为空")
+                    results[f"{name}_{address}"] = False
+                    continue
+                
+                if not chain_id or chain_id not in self.chain_configs:
+                    print(f"❌ 错误: 不支持的链 '{chain}'")
+                    results[f"{name}_{address}"] = False
+                    continue
+                
+                # 下载合约
+                success = self.download_contract(chain_id, address, block_number, show_header=False)
+                results[f"{name}_{address}"] = success
+                
+                if success:
+                    successful_downloads += 1
+                
+                # 添加延迟避免API限制
+                if i < total_contracts:
+                    time.sleep(1)
+                    
+            except Exception as e:
+                print(f"❌ 处理合约时出错: {e}")
+                results[f"Contract_{i}_{contract.get('address', 'unknown')}"] = False
+        
+        # 显示总结
+        print("\n" + "=" * 60)
+        print("批量下载完成!")
+        print(f"成功: {successful_downloads}/{total_contracts}")
+        print("=" * 60)
+        
+        # 显示详细结果
+        print("\n详细结果:")
+        for contract_id, success in results.items():
+            status = "✅ 成功" if success else "❌ 失败"
+            print(f"  {contract_id}: {status}")
+        
+        return results
 
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(description="智能合约源代码下载器")
-    parser.add_argument("contract_address", help="合约地址")
-    parser.add_argument("chain_id", help="链ID (1=Ethereum, 56=BSC, 137=Polygon, 等)")
+    parser.add_argument("contract_address", nargs="?", help="合约地址")
+    parser.add_argument("chain_id", nargs="?", help="链ID (1=Ethereum, 56=BSC, 137=Polygon, 等)")
     parser.add_argument("--block", "-b", help="区块号 (可选)", default=None)
     parser.add_argument("--list-chains", "-l", action="store_true", help="显示支持的链")
+    parser.add_argument("--batch", help="批量下载，指定包含合约信息的JSON文件路径")
     
     args = parser.parse_args()
     
@@ -303,11 +410,44 @@ def main():
             print(f"  {chain_id}: {config['name']} ({config['explorer_url']})")
         return
     
-    # 下载合约
-    success = downloader.download_contract(args.chain_id, args.contract_address, args.block)
-    
-    if not success:
-        sys.exit(1)
+    if args.batch:
+        # 批量下载模式
+        try:
+            with open(args.batch, 'r', encoding='utf-8') as f:
+                contracts = json.load(f)
+            
+            if not isinstance(contracts, list):
+                print("错误: JSON文件应包含合约信息数组")
+                sys.exit(1)
+            
+            results = downloader.download_contracts_batch(contracts)
+            
+            # 检查是否有失败的下载
+            failed_count = sum(1 for success in results.values() if not success)
+            if failed_count > 0:
+                sys.exit(1)
+                
+        except FileNotFoundError:
+            print(f"错误: 文件 '{args.batch}' 不存在")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"错误: JSON文件格式错误: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"错误: {e}")
+            sys.exit(1)
+    else:
+        # 单个合约下载模式
+        if not args.contract_address or not args.chain_id:
+            print("错误: 请提供合约地址和链ID，或使用 --batch 选项进行批量下载")
+            parser.print_help()
+            sys.exit(1)
+        
+        # 下载合约
+        success = downloader.download_contract(args.chain_id, args.contract_address, args.block)
+        
+        if not success:
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

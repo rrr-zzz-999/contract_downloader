@@ -56,10 +56,24 @@ python contract_downloader.py <合约地址> <链ID>
 python contract_downloader.py <合约地址> <链ID> --block <区块号>
 ```
 
+### 批量下载（从JSON文件）
+
+```bash
+python contract_downloader.py --batch contracts.json
+```
+
 ### 查看支持的链
 
 ```bash
 python contract_downloader.py --list-chains
+```
+
+### 批量下载脚本
+
+使用专门的批量下载脚本：
+
+```bash
+python batch_downloader.py
 ```
 
 ## 使用示例
@@ -77,6 +91,59 @@ python contract_downloader.py 0x10ED43C718714eb63d5aA57B78B54704E256024E 56
 ### 下载指定区块号的合约
 ```bash
 python contract_downloader.py 0xdAC17F958D2ee523a2206206994597C13D831ec7 1 --block 18500000
+```
+
+### 批量下载示例
+
+#### 从JSON文件批量下载
+```bash
+python contract_downloader.py --batch contracts_example.json
+```
+
+#### 使用专门的批量下载脚本
+```bash
+python batch_downloader.py
+```
+
+#### JSON文件格式示例
+```json
+[
+  {
+    "name": "uranium",
+    "chain": "bsc",
+    "height": "6920000",
+    "address": "0xbb4Cd89Cd6B01bD1cBaEBF2De08d9173bc095c"
+  },
+  {
+    "name": "valuedefi",
+    "chain": "bsc", 
+    "height": "7223029",
+    "address": "0x7Af938f0EFDD98Dc5131109F6A7E51106D26E16c"
+  }
+]
+```
+
+#### CSV文件格式示例
+```csv
+Name,Date,Chain,Height,Address
+uranium,2021-4-27,bsc,6920000,0xbb4Cd89Cd6B01bD1cBaEBF2De08d9173bc095c
+valuedefi,2021-5-8,bsc,7223029,0x7Af938f0EFDD98Dc5131109F6A7E51106D26E16c
+```
+
+#### 在代码中使用批量下载
+```python
+from batch_downloader import download_from_array
+
+contracts = [
+    {
+        "name": "uranium",
+        "chain": "bsc",
+        "height": "6920000", 
+        "address": "0xbb4Cd89Cd6B01bD1cBaEBF2De08d9173bc095c"
+    }
+]
+
+results = download_from_array(contracts)
 ```
 
 ## 输出结构
