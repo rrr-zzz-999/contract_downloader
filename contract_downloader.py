@@ -212,17 +212,22 @@ class ContractDownloader:
             print(f"未知错误: {e}")
             return None
     
-    def save_contract_files(self, chain_id: str, contract_address: str, contract_data: Dict, block_number: Optional[str] = None) -> bool:
+    def save_contract_files(self, chain_id: str, contract_address: str, contract_data: Dict, block_number: Optional[str] = None, custom_name: Optional[str] = None) -> bool:
         """保存合约文件到本地"""
         try:
             chain_name = self.chain_configs[chain_id]["name"]
             contract_name = contract_data.get("ContractName", "Unknown")
             
             # 创建目录结构
-            if block_number:
-                dir_name = f"{chain_name}_{contract_address}_{block_number}"
+            if custom_name:
+                # 使用自定义名称作为目录名
+                dir_name = custom_name
             else:
-                dir_name = f"{chain_name}_{contract_address}"
+                # 使用原来的命名方式
+                if block_number:
+                    dir_name = f"{chain_name}_{contract_address}_{block_number}"
+                else:
+                    dir_name = f"{chain_name}_{contract_address}"
             
             contract_dir = self.output_dir / dir_name
             contract_dir.mkdir(exist_ok=True)
@@ -311,7 +316,7 @@ class ContractDownloader:
             print(f"保存文件时出错: {e}")
             return False
     
-    def download_contract(self, chain_id: str, contract_address: str, block_number: Optional[str] = None, show_header: bool = True) -> bool:
+    def download_contract(self, chain_id: str, contract_address: str, block_number: Optional[str] = None, show_header: bool = True, custom_name: Optional[str] = None) -> bool:
         """下载合约的主要方法"""
         if show_header:
             print("=" * 60)
@@ -331,7 +336,7 @@ class ContractDownloader:
         print(f"  许可证: {contract_data.get('LicenseType', 'Unknown')}")
         
         # 保存文件
-        success = self.save_contract_files(chain_id, contract_address, contract_data, block_number)
+        success = self.save_contract_files(chain_id, contract_address, contract_data, block_number, custom_name)
         
         if success:
             print(f"\n✅ 合约下载完成!")
@@ -417,7 +422,7 @@ class ContractDownloader:
                     continue
                 
                 # 下载合约
-                success = self.download_contract(chain_id, address, block_number, show_header=False)
+                success = self.download_contract(chain_id, address, block_number, show_header=False, custom_name=name)
                 results[f"{name}_{address}"] = success
                 
                 if success:
